@@ -1901,7 +1901,7 @@ int panel_probe(struct panel_device *panel)
 	panel_data->props.poc_onoff = POC_ONOFF_ON;
 	mutex_unlock(&panel->panel_bl.lock);
 
-	panel_data->props.mres_mode = 1;
+	panel_data->props.mres_mode = 0;
 	panel_data->props.mres_updated = false;
 	panel_data->props.ub_con_cnt = 0;
 	panel_data->props.conn_det_enable = 0;
