@@ -2480,7 +2480,8 @@ int panel_display_mode_cb(struct panel_device *panel)
 static bool check_display_mode_cond(struct panel_device *panel)
 {
 	struct panel_properties *props = &panel->panel_data.props;
-
+	
+#if defined(CONFIG_SEC_FACTORY)
 	if (props->alpm_mode != ALPM_OFF) {
 		panel_warn("could not change display mode in lpm(%d) state\n",
 			   props->alpm_mode);
@@ -2491,7 +2492,7 @@ static bool check_display_mode_cond(struct panel_device *panel)
 			   props->mcd_on);
 		return false;
 	}
-
+#endif
 	return true;
 }
 
