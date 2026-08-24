@@ -2480,7 +2480,8 @@ int panel_display_mode_cb(struct panel_device *panel)
 static bool check_display_mode_cond(struct panel_device *panel)
 {
 	struct panel_properties *props = &panel->panel_data.props;
-
+	
+#if defined(CONFIG_SEC_FACTORY)
 	if (props->alpm_mode != ALPM_OFF) {
 		panel_warn("could not change display mode in lpm(%d) state\n",
 			   props->alpm_mode);
@@ -2491,7 +2492,7 @@ static bool check_display_mode_cond(struct panel_device *panel)
 			   props->mcd_on);
 		return false;
 	}
-
+#endif
 	return true;
 }
 
@@ -2740,12 +2741,6 @@ int panel_set_display_mode_nolock(struct panel_device *panel, int panel_mode)
 	if (!panel_display_mode_is_supported(panel)) {
 		panel_err("panel_display_mode not supported\n");
 		return -EINVAL;
-	}
-
-	if (!check_display_mode_cond(panel)) {
-		panel_warn("could not change display mode now (alpm=%d, mcd=%d)\n",
-			   props->alpm_mode, props->mcd_on);
-		return -EBUSY;
 	}
 
 	common_panel_modes = panel->panel_data.common_panel_modes;
