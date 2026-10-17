@@ -1,4 +1,4 @@
-## Build instructions:
+## Benly Kernel Build instructions:
 
 1. Set up build environment as per Google documentation
 
@@ -9,15 +9,15 @@ https://source.android.com/docs/setup/start/requirements
 
 2. Properly clone repository with submodules (KernelSU and toolchains)
 
-```git clone --recurse-submodules https://github.com/Android-Artisan/android_kernel_samsung_exynos990.git```
+```git clone --recurse-submodules https://github.com/benly-binh24/BenlyROMkernel_exynos990.git```
 
-3. Build for your device without CCache and with KSU
+3. Build for your device with KSU
 
-```./build.sh -m c2slte -k y -c n```
+```./build.sh -m c2slte -k y```
 
 4. Fetch the flashable zip of the kernel that was just compiled
 
-```build/out/[your_device]/ArtisanKRNL...zip```
+```build/out/[your_device]/BenlyKRNL...zip```
 
 5. Flash it using a supported recovery like TWRP either using the install function or ADB Sideload
 
