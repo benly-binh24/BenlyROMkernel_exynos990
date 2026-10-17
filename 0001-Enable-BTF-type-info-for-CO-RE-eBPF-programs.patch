@@ -1,0 +1,77 @@
+From b5b5d39dde63b1724a187be3c6df66d81870948f Mon Sep 17 00:00:00 2001
+From: UN1CA <dev@unica>
+Date: Sat, 17 Oct 2026 13:54:40 +0700
+Subject: [PATCH] unica: kernel: enable BTF type info for CO-RE eBPF programs
+
+Android's newer bpfloader (BpfLoader-rs) and several system .bpf
+programs (timeInState.bpf, dmabufIter.bpf, bpfLockContention.bpf, ...)
+use CO-RE (BPF_CORE_READ / bpf_core_read) to read kernel struct fields.
+CO-RE needs the kernel to publish its own type info at
+/sys/kernel/btf/vmlinux, which requires CONFIG_DEBUG_INFO_BTF.
+
+This kernel's Makefile and scripts/link-vmlinux.sh already carry the
+upstream BTF generation logic (pahole invocation, RESOLVE_BTFIDS), but
+CONFIG_DEBUG_INFO_BTF / CONFIG_DEBUG_INFO_DWARF4 were never enabled in
+defconfig, so vmlinux was built without BTF at all.
+
+- Enable CONFIG_DEBUG_INFO_DWARF4 and CONFIG_DEBUG_INFO_BTF in the
+  common defconfig so pahole converts DWARF type info into BTF for
+  vmlinux (requires a build host with pahole >= 1.13; see dwarves
+  package).
+- tools/bpf/resolve_btfids was never backported into this tree, so
+   never gets built and unconditionally calling it
+  would fail the vmlinux link. resolve_btfids only resolves BTF IDs
+  for BPF trampoline/kfunc matching (fentry/fexit, BTF_ID_LIST); it is
+  not needed for plain CO-RE struct access, which is all these
+  programs use. Skip the step gracefully instead of hard-failing the
+  build when the tool is absent.
+---
+ arch/arm64/configs/defconfig |  2 ++
+ scripts/link-vmlinux.sh      | 17 +++++++++++++++--
+ 2 files changed, 17 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/configs/defconfig b/arch/arm64/configs/defconfig
+index cc2accd3d..77b28f651 100644
+--- a/arch/arm64/configs/defconfig
++++ b/arch/arm64/configs/defconfig
+@@ -723,6 +723,8 @@ CONFIG_VIRTUALIZATION=y
+ CONFIG_KVM=y
+ CONFIG_PRINTK_TIME=y
+ CONFIG_DEBUG_INFO=y
++CONFIG_DEBUG_INFO_DWARF4=y
++CONFIG_DEBUG_INFO_BTF=y
+ CONFIG_DEBUG_FS=y
+ CONFIG_MAGIC_SYSRQ=y
+ CONFIG_DEBUG_KERNEL=y
+diff --git a/scripts/link-vmlinux.sh b/scripts/link-vmlinux.sh
+index 4667edbfa..7f604a9b9 100755
+--- a/scripts/link-vmlinux.sh
++++ b/scripts/link-vmlinux.sh
+@@ -379,9 +379,22 @@ info LD vmlinux
+ vmlinux_link vmlinux "${kallsymso}" "${btf_vmlinux_bin_o}"
+ 
+ # fill in BTF IDs
++#
++# resolve_btfids resolves BTF IDs used by BPF trampoline/kfunc matching
++# (fentry/fexit, BTF_ID_LIST). Its source under tools/bpf/resolve_btfids/
++# was never backported into this tree, so the binary never gets built.
++# Plain CO-RE struct access (BPF_CORE_READ/bpf_core_read, used by the
++# system/etc/bpf/*.bpf programs) only needs the deduplicated BTF type
++# info that pahole already produced above; it does not need BTF ID
++# resolution. Skip this step instead of failing the whole vmlinux link
++# when the tool is missing.
+ if [ -n "${CONFIG_DEBUG_INFO_BTF}" ]; then
+-info BTFIDS vmlinux
+-${RESOLVE_BTFIDS} vmlinux
++	if [ -x "${RESOLVE_BTFIDS}" ]; then
++		info BTFIDS vmlinux
++		${RESOLVE_BTFIDS} vmlinux
++	else
++		info BTFIDS "vmlinux (skipped: ${RESOLVE_BTFIDS} not built)"
++	fi
+ fi
+ 
+ if [ -n "${CONFIG_BUILDTIME_EXTABLE_SORT}" ]; then
+-- 
+2.43.0
+
